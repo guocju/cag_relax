@@ -1486,6 +1486,8 @@ inline const char* DLDeviceType2Str(int type) {
       return "opengl";
     case kDLMicroDev:
       return "microdev";
+    case kDLFPGA:
+      return "fpga";
     default:
       LOG(FATAL) << "unknown type = " << type;
   }

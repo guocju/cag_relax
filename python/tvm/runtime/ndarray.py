@@ -643,6 +643,22 @@ def webgpu(dev_id=0):
     """
     return Device(Device.kDLWebGPU, dev_id)
 
+def fpga(dev_id=0):
+    """Construct a CAG FPGA device.
+
+    Parameters
+    ----------
+    dev_id : int, optional
+        The integer device id
+
+    Returns
+    -------
+    dev : Device
+        The created device
+    """
+    return Device(Device.kDLFPGA, dev_id)
+
+
 
 cl = opencl
 mtl = metal

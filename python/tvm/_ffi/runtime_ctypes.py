@@ -264,6 +264,7 @@ class Device(ctypes.Structure):
     kDLOneAPI = 14
     kDLWebGPU = 15
     kDLHexagon = 16
+    kDLFPGA = 17
     kDLAOCL = 32
     kDLSDAccel = 33
     kOpenGL = 34
@@ -285,6 +286,7 @@ class Device(ctypes.Structure):
         kDLOneAPI: "oneapi",
         kDLWebGPU: "webgpu",
         kDLHexagon: "hexagon",
+        kDLFPGA: "fpga",
         kDLAOCL: "aocl",
         kDLSDAccel: "sdaccel",
         kOpenGL: "opengl",
@@ -308,6 +310,7 @@ class Device(ctypes.Structure):
         "aocl_sw_emu": kDLAOCL,
         "vulkan": kDLVulkan,
         "metal": kDLMetal,
+        "fpga": kDLFPGA,
         "vpi": kDLVPI,
         "rocm": kDLROCM,
         "ext_dev": kDLExtDev,
