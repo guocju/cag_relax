@@ -441,6 +441,8 @@ TVM_REGISTER_TARGET_KIND("hexagon", kDLHexagon)
     .add_attr_option<runtime::Int>("vtcm-capacity")
     .set_default_keys({"hexagon", "cpu"});
 
+TVM_REGISTER_TARGET_KIND("fpga", kDLFPGA);
+
 TVM_REGISTER_TARGET_KIND("stackvm", kDLCPU)  // line break
     .set_default_keys({"cpu"});
 

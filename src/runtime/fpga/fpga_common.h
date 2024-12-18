@@ -3,18 +3,15 @@
 
 #include <tvm/runtime/packed_func.h>
 
+#include "fpga_utils.h"
+
 namespace tvm {
 namespace runtime {
 
+#define FPGA_CALL(func) \
+  { (func); }
 
-#define FPGA_CALL(func)                                       \
-  {                                                           \
-    (func);                                   \
-  }
-
-void fpgaSetDevice(int id){
-  return;
-}
+void fpgaSetDevice(int id) { return; }
 
 }  // namespace runtime
 }  // namespace tvm

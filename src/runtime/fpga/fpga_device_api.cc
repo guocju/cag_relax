@@ -4,7 +4,6 @@
 #include <tvm/runtime/registry.h>
 
 #include "fpga_common.h"
-#include "fpga_utils.h"
 
 namespace tvm {
 namespace runtime {
@@ -13,25 +12,24 @@ class FPGADeviceAPI final : public DeviceAPI {
  public:
   void SetDevice(Device dev) final { FPGA_CALL(fpgaSetDevice(dev.device_id)); }
 
-  void GetAttr(Device dev, DeviceAttrKind kind, TVMRetValue* rv) final
-  {
-    return;
-  }
+  void GetAttr(Device dev, DeviceAttrKind kind, TVMRetValue* rv) final { return; }
 
   void* AllocDataSpace(Device dev, size_t nbytes, size_t alignment, DLDataType type_hint) final {
-    ICHECK_EQ(4096 % alignment, 0U) << "FPGA space is aligned at 4096 bytes";
+    ICHECK_EQ(64 % alignment, 0U) << "FPGA space is aligned at 64 bytes";
     void* ret;
-    ret = nullptr;
-    // FPGA_CALL(fpgaSetDevice(dev.device_id));
-    // VLOG(1) << "allocating " << nbytes << " bytes on device";
-    // FPGA_CALL(fpgaMalloc(&ret, nbytes));
-    
+    FPGA_CALL(fpgaSetDevice(dev.device_id));
+    size_t free_mem, total_mem;
+    FPGA_CALL(fpgaMemGetInfo(&free_mem, &total_mem));
+    VLOG(1) << "allocating " << nbytes << " bytes on device, with " << free_mem
+            << " bytes currently free out of " << total_mem << " bytes available";
+    FPGA_CALL(fpgaMalloc(ret, nbytes));
     return ret;
   }
 
-  void FreeDataSpace(Device dev, void* ptr) final
-  {
-    return;
+  void FreeDataSpace(Device dev, void* ptr) final {
+    FPGA_CALL(fpgaSetDevice(dev.device_id));
+    VLOG(1) << "freeing device memory";
+    FPGA_CALL(fpgaFree(ptr));
   }
 
   void CopyDataFromTo(const void* from, size_t from_offset, void* to, size_t to_offset, size_t size,
@@ -52,7 +50,7 @@ class FPGADeviceAPI final : public DeviceAPI {
     //   } else {
     //     LOG(FATAL) << "Only support one FPGA card";
     //   }
-    // } else 
+    // } else
     if (dev_from.device_type == kDLFPGA && dev_to.device_type == kDLCPU) {
       FPGA_CALL(fpgaSetDevice(dev_from.device_id));
       FPGACopy(from, to, size, fpgaMemcpyDeviceToHost, stream);
@@ -69,15 +67,13 @@ class FPGADeviceAPI final : public DeviceAPI {
     return inst;
   }
 
-  void StreamSync(Device dev, TVMStreamHandle stream) final {
-    return;
-  }
+  void StreamSync(Device dev, TVMStreamHandle stream) final { return; }
 
-  private:
+ private:
   static void FPGACopy(const void* from, void* to, size_t size, fpgaMemcpyKind kind,
-                      TVMStreamHandle stream) {
+                       TVMStreamHandle stream) {
     if (stream != nullptr) {
-      //FPGA_CALL(fpgaMemcpyAsync(to, from, size, kind, stream));
+      // FPGA_CALL(fpgaMemcpyAsync(to, from, size, kind, stream));
     } else {
       FPGA_CALL(fpgaMemcpy(to, from, size, kind));
     }
