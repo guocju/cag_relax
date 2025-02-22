@@ -31,3 +31,6 @@
 [submodule "3rdparty/flashinfer"]
 	path = 3rdparty/flashinfer
 	url = https://github.com/flashinfer-ai/flashinfer.git
+[submodule "3rdparty/HPU500"]
+	path = 3rdparty/HPU500
+	url = http://202.117.56.250/cag-tool-chains/hpu500.git
