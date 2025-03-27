@@ -55,6 +55,20 @@ inline std::unordered_map<std::string, runtime::FunctionInfo> ExtractFuncInfo(co
         info.launch_param_tags.push_back(tag);
       }
     }
+    if (auto buffer_sizes = f->GetAttr<Array<Integer>>(tvm::attr::kP2Psizes)) {
+      for (const auto& size : buffer_sizes.value()) {
+        int size_value = size.IntValue();
+        info.buffer_sizes.push_back(size_value);
+      }
+    }
+    if (auto slice_num = f->GetAttr<Integer>(tvm::attr::kP2PSliceNumber)) {
+      int slice_number = slice_num.value().IntValue();
+      info.slice_num = slice_number;
+    }
+    if (auto param_num = f->GetAttr<Integer>(tvm::attr::kP2ParamNumber)) {
+      int param_number = param_num.value().IntValue();
+      info.param_num = param_number;
+    }
     auto global_symbol = f->GetAttr<String>(tvm::attr::kGlobalSymbol);
     fmap[static_cast<std::string>(global_symbol.value())] = info;
   }

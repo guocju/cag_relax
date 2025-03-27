@@ -71,6 +71,9 @@ struct FunctionInfo {
   std::string name;
   std::vector<DLDataType> arg_types;
   std::vector<std::string> launch_param_tags;
+  std::vector<int> buffer_sizes;
+  int slice_num;
+  int param_num;
 
   void Save(dmlc::JSONWriter* writer) const;
   void Load(dmlc::JSONReader* reader);

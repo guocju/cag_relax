@@ -43,8 +43,9 @@ namespace tir {
 
 class HostDeviceSplitter : public StmtMutator {
  public:
-  explicit HostDeviceSplitter(IRModule* device_mod, std::function<GlobalVar()> var_supply)
-      : device_mod_(device_mod), var_supply_(var_supply) {}
+  explicit HostDeviceSplitter(PrimFunc func, IRModule* device_mod,
+                              std::function<GlobalVar()> var_supply)
+      : func_(func), device_mod_(device_mod), var_supply_(var_supply) {}
 
   Stmt VisitStmt_(const AttrStmtNode* op) final {
     if (op->attr_key == tvm::attr::kTarget) {
@@ -98,6 +99,18 @@ class HostDeviceSplitter : public StmtMutator {
     device_func = WithAttrs(std::move(device_func), {{tvm::attr::kTarget, device_target},
                                                      {tir::attr::kNoAlias, Bool(true)},
                                                      {tir::attr::kIsGlobalFunc, Bool(true)}});
+    auto buffer_sizes = func_->GetAttr<Array<Integer>>(tvm::attr::kP2Psizes);
+    auto slice_number = func_->GetAttr<Integer>(tvm::attr::kP2PSliceNumber);
+    auto param_num = func_->GetAttr<Integer>(tvm::attr::kP2ParamNumber);
+    if (buffer_sizes.defined()) {
+      device_func = WithAttrs(std::move(device_func), {{tvm::attr::kP2Psizes, buffer_sizes}});
+    }
+    if (slice_number.defined()) {
+      device_func = WithAttrs(std::move(device_func), {{tvm::attr::kP2PSliceNumber, slice_number}});
+    }
+    if (param_num.defined()) {
+      device_func = WithAttrs(std::move(device_func), {{tvm::attr::kP2ParamNumber, param_num}});
+    }
 
     GlobalVar kernel_symbol_global = var_supply_();
     (*device_mod_)->Add(kernel_symbol_global, device_func);
@@ -116,6 +129,7 @@ class HostDeviceSplitter : public StmtMutator {
     }
   }
 
+  PrimFunc func_;
   // target ir module
   IRModule* device_mod_;
   // Generate new GlobalVar for the kernel
@@ -124,7 +138,7 @@ class HostDeviceSplitter : public StmtMutator {
 
 PrimFunc SplitHostDevice(PrimFunc func, IRModule* device_mod,
                          std::function<GlobalVar()> var_supply) {
-  HostDeviceSplitter splitter(device_mod, var_supply);
+  HostDeviceSplitter splitter(func, device_mod, var_supply);
 
   if (auto body = splitter(func->body); !body.same_as(func->body)) {
     func.CopyOnWrite()->body = body;

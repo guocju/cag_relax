@@ -70,7 +70,7 @@ Pass AnnotateDeviceRegions() {
     }
     return func;
   };
-
+  // TODO(guocj): change logic for fpga device, add a new attr called "fpga_kernel"
   return CreatePrimFuncPass(pass_func, 0, "tir.AnnotateDeviceRegions", {});
 }
 

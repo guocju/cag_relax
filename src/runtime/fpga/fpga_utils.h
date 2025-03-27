@@ -7,13 +7,22 @@
 #include <time.h>
 #include <unistd.h>
 
+#include <vector>
+
 #include "MemAllocator.h"
+#ifndef FPGA_UTILS_H
+#define FPGA_UTILS_H
 
 #define RW_MAX_SIZE 0x7ffff000
 #define HOST_TO_DEVICE "/dev/xdma0_h2c_0"
 #define DEVICE_TO_HOST "/dev/xdma0_c2h_0"
+struct gpu_buffer {
+  void* address;
+  size_t size;
+};
+static std::vector<gpu_buffer> GpuBufferArray = {};
 
-ssize_t read_to_buffer(char* fname, int fd, char* buffer, uint64_t size, uint64_t base) {
+inline ssize_t read_to_buffer(char* fname, int fd, char* buffer, uint64_t size, uint64_t base) {
   ssize_t rc;
   uint64_t count = 0;
   char* buf = buffer;
@@ -58,7 +67,7 @@ ssize_t read_to_buffer(char* fname, int fd, char* buffer, uint64_t size, uint64_
   return count;
 }
 
-ssize_t write_from_buffer(char* fname, int fd, char* buffer, size_t size, uint64_t base) {
+inline ssize_t write_from_buffer(char* fname, int fd, char* buffer, size_t size, uint64_t base) {
   ssize_t rc;
   uint64_t count = 0;
   char* buf = buffer;
@@ -104,9 +113,9 @@ ssize_t write_from_buffer(char* fname, int fd, char* buffer, size_t size, uint64
   return count;
 }
 
-enum fpgaMemcpyKind { fpgaMemcpyHostToDevice, fpgaMemcpyDeviceToHost, fpgaMemcpyDeviceToDevice };
+enum fpgaMemcpyKind { fpgaMemcpyHostToDevice, fpgaMemcpyDeviceToHost, fpgaMemcpyToGPU };
 
-int fpgaMemcpy(void* to, const void* from, size_t size, fpgaMemcpyKind kind) {
+inline int fpgaMemcpy(void* to, const void* from, size_t size, fpgaMemcpyKind kind) {
   ssize_t rc;
   size_t bytes_done = 0;
   int underflow = 0;
@@ -151,6 +160,9 @@ int fpgaMemcpy(void* to, const void* from, size_t size, fpgaMemcpyKind kind) {
       underflow = 1;
     }
     goto out;
+  } else if (kind == fpgaMemcpyToGPU) {
+    gpu_buffer buffer{to, size};
+    GpuBufferArray.emplace_back(buffer);
   }
 
 out:
@@ -160,18 +172,38 @@ out:
   return underflow ? -EIO : 0;
 }
 
-void fpgaMemGetInfo(size_t* free_mem, size_t* total_mem) {
+inline void fpgaMemGetInfo(size_t* free_mem, size_t* total_mem) {
   MemAllocator* allocator = MemAllocator::Global();
   *free_mem = allocator->get_free_mem();
   *total_mem = allocator->get_total_mem();
 }
 
-void fpgaMalloc(void*& ret, size_t nbytes) {
+inline void fpgaMalloc(void*& ret, size_t nbytes) {
   MemAllocator* allocator = MemAllocator::Global();
   ret = allocator->allocate(nbytes);
 }
 
-void fpgaFree(void* ptr) {
+inline void fpgaFree(void* ptr) {
   MemAllocator* allocator = MemAllocator::Global();
   allocator->deallocate(ptr);
 }
+
+inline void translate_and_transfer() {
+  /*
+  translate();
+  transfer();
+  GpuBufferArray = {};
+  */
+}
+inline void launch_p2p_kernel(int slice_number) {}
+inline void fpgaModuleLaunchKernel(int data_size, int slice_num, int* buffer_sizes, int param_num,
+                                   void** ptrs, int ptr_num, int buffer_num) {
+  /*
+  transferCtrlKernelCode(code, data, addr);
+  TransferParams(ptrs, ptr_num, data_size, buffer_sizes, param_num, buffer_num, slice_num);
+  mmap_fpga_register();
+  StartCtrlKernel();
+  */
+}
+
+#endif

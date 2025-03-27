@@ -124,7 +124,13 @@ constexpr const char* kTarget = "target";
  * Type: String
  */
 constexpr const char* kGlobalSymbol = "global_symbol";
-
+/*Type: Array<Integer>
+Input and output buffer sizes*/
+constexpr const char* kP2Psizes = "p2p_sizes";
+// Type: Integer
+constexpr const char* kP2PSliceNumber = "slice_num";
+// Type: Integer
+constexpr const char* kP2ParamNumber = "param_num";
 }  // namespace attr
 
 /*!

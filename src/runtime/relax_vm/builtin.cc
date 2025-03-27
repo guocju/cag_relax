@@ -424,6 +424,20 @@ TVM_REGISTER_GLOBAL("vm.builtin.to_device")
       return data.CopyTo(dst_device);
     });
 
+TVM_REGISTER_GLOBAL("vm.builtin.p2p_descriptor_transfer").set_body_typed([](NDArray slice_num) {
+  ShapeTuple shape = slice_num.Shape();
+  ICHECK_EQ(shape.size(), 1) << "NDArray slice_num only has 1 dimension";
+  ICHECK_EQ(shape[0], 1) << "Shape of NDArray slice_num should be (1,)";
+  ICHECK_EQ(slice_num->dtype.code, 0) << "NDArray slice_num must be int32";
+  ICHECK_EQ(slice_num->dtype.bits, 32) << "NDArray slice_num must be int32";
+  int32_t* data_ptr = static_cast<int32_t*>(slice_num->data);
+  int number = data_ptr[0];
+  Device fpga_device = {(DLDeviceType)17, 0};
+
+  // DeviceAPI::Get(fpga_device)->transfer_descriptor(number);
+  return slice_num;
+});
+
 /*!
  * \brief Load the scalar value in cond and return the result value.
  * \param cond The condition

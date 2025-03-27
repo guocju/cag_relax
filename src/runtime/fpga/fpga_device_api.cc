@@ -43,23 +43,23 @@ class FPGADeviceAPI final : public DeviceAPI {
       memcpy(to, from, size);
       return;
     }
-    // if (dev_from.device_type == kDLFPGA && dev_to.device_type == kDLFPGA) {
-    //   FPGA_CALL(fpgaSetDevice(dev_from.device_id));
-    //   if (dev_from.device_id == dev_to.device_id) {
-    //     FPGACopy(from, to, size, fpgaMemcpyDeviceToDevice, stream);
-    //   } else {
-    //     LOG(FATAL) << "Only support one FPGA card";
-    //   }
-    // } else
     if (dev_from.device_type == kDLFPGA && dev_to.device_type == kDLCPU) {
       FPGA_CALL(fpgaSetDevice(dev_from.device_id));
       FPGACopy(from, to, size, fpgaMemcpyDeviceToHost, stream);
     } else if (dev_from.device_type == kDLCPU && dev_to.device_type == kDLFPGA) {
       FPGA_CALL(fpgaSetDevice(dev_to.device_id));
       FPGACopy(from, to, size, fpgaMemcpyHostToDevice, stream);
+    } else if (dev_from.device_type == kDLFPGA && dev_to.device_type == kDLCUDA) {
+      FPGA_CALL(fpgaSetDevice(dev_to.device_id));
+      FPGACopy(from, to, size, fpgaMemcpyToGPU, stream);
     } else {
       LOG(FATAL) << "expect copy from/to FPGA or in FPGA";
     }
+  }
+
+  void transfer_descriptor(int slice_number) {
+    translate_and_transfer();
+    launch_p2p_kernel(slice_number);
   }
 
   static FPGADeviceAPI* Global() {

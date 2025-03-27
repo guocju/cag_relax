@@ -169,7 +169,7 @@ class CUDAWrappedFunc {
   void operator()(TVMArgs args, TVMRetValue* rv, void** void_args) const {
     int device_id;
     CUDA_CALL(cudaGetDevice(&device_id));
-    ThreadWorkLoad wl = launch_param_config_.Extract(args);
+    ThreadWorkLoad wl = launch_param_config_.Extract(args);  //
 
     if (fcache_[device_id] == nullptr) {
       fcache_[device_id] = m_->GetFunc(device_id, func_name_);
