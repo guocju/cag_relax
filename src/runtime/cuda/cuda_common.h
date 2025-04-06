@@ -64,6 +64,20 @@ class CUDAThreadEntry {
   static CUDAThreadEntry* ThreadLocal();
 };
 
+struct LaunchParams {
+  cudaFunction_t f;
+  unsigned int gridDimX;
+  unsigned int gridDimY;
+  unsigned int gridDimZ;
+  unsigned int blockDimX;
+  unsigned int blockDimY;
+  unsigned int blockDimZ;
+  unsigned int sharedMemBytes;
+  cudaStream_t hStream;
+  void** kernelParams;
+  void** extra;
+};
+
 inline cudaStream_t GetCUDAStream() { return CUDAThreadEntry::ThreadLocal()->stream; }
 
 }  // namespace runtime

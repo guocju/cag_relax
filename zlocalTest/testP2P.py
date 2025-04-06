@@ -3,7 +3,7 @@ import tvm
 import numpy as np
 import tvm.script
 import tvm.testing
-from tvm import relax
+from tvm import relax, tir
 from tvm.script import relax as R, tir as T, ir as I
 from tvm.ir.global_info import VDevice
 from typing import List
@@ -45,13 +45,13 @@ class TestP2P:
     @T.prim_func
     def fpga_process(
         A: T.Buffer((8, 256, 256), "float32"), params: T.Buffer((16, 16), "float32"),
-        B: T.Buffer((2,), "int8"), C: T.Buffer((2, 256, 256), "float32"),
+        B: T.Buffer((4,), "int8"), C: T.Buffer((2, 256, 256), "float32"),
         D: T.Buffer((2, 256, 256), "float32"),E: T.Buffer((2, 256, 256), "float32"),
         F: T.Buffer((2, 256, 256), "float32"),G: T.Buffer((2, 256, 256), "float32"),
         H: T.Buffer((2, 256, 256), "float32"),
     ):
         T.func_attr({"global_symbol": "fpga_process", "target": fpga_target, 
-                     "slice_num" : slice_number, "param_num" : 2})
+                     "slice_num" : slice_number, "param_num" : 1})
         T.attr(T.target("fpga"), "target", 0) #necessary for compiler
         for i in T.serial(1):
             for j, k in T.grid(256, 256):
@@ -64,16 +64,22 @@ class TestP2P:
                     G[0, vj, vk] = A[vi, vj, vk] * 7.0
                     H[0, vj, vk] = A[vi, vj, vk] * 8.0
     
+    # A：4xint8, slice_id+flag
     @T.prim_func
     def p2p_gpu_process(
-        A: T.Buffer((2,), "int8"),B: T.Buffer((2, 256, 256), "float32"),
+        A: T.Buffer((4,), "int8"),B: T.Buffer((2, 256, 256), "float32"),
         C: T.Buffer((2, 256, 256), "float32"),D: T.Buffer((2, 256, 256), "float32"),
         E: T.Buffer((2, 256, 256), "float32"),F: T.Buffer((2, 256, 256), "float32"),
         G: T.Buffer((2, 256, 256), "float32"),
         out: T.Buffer((8, 256, 256), "float32"),
     ):
-        T.func_attr({"global_symbol": "p2p_gpu_process", "target": cuda_target})
-
+        T.func_attr({"global_symbol": "p2p_gpu_process", "target": cuda_target, "slice_num" : slice_number})
+        for b0 in T.thread_binding(1, thread="blockIdx.x"):
+                for t0 in T.thread_binding(1, thread="threadIdx.x"):
+                    with T.block("wait"):  
+                        while  A[1] == 0:
+                            T.evaluate(A[1])
+                            
         bx = T.thread_binding(8, "blockIdx.x")
         by = T.thread_binding(256, "blockIdx.y")
         tx = T.thread_binding(256, "threadIdx.x")
@@ -95,7 +101,7 @@ class TestP2P:
         params = R.to_vdevice(params, "fpga")
 
         out= R.call_tir(TestP2P.fpga_process, (data, params), out_sinfo=[
-                R.Tensor((2,), "int8"),R.Tensor((2, 256, 256), "float32"),
+                R.Tensor((4,), "int8"),R.Tensor((2, 256, 256), "float32"),
                 R.Tensor((2, 256, 256), "float32"),R.Tensor((2, 256, 256), "float32"),
                 R.Tensor((2, 256, 256), "float32"),R.Tensor((2, 256, 256), "float32"),
                 R.Tensor((2, 256, 256), "float32")]
@@ -120,8 +126,9 @@ class TestP2P:
         return res
 
 
+
 mod = TestP2P
-mod = get_buffer_sizes(mod)
+mod = get_buffer_sizes(mod, global_symbol="foo")
 target = [tvm.cpu(0), tvm.fpga(0), tvm.cuda(0)]
 vm = compile(mod, target)
 inp = tvm.nd.array(np.random.rand(8, 256, 256).astype(np.float32))

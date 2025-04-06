@@ -147,6 +147,22 @@ PrimFunc SplitHostDevice(PrimFunc func, IRModule* device_mod,
   return func;
 }
 
+class KernelCounter : public StmtVisitor {
+ public:
+  explicit KernelCounter(PrimFunc func) : func_(func) {}
+
+  void VisitStmt_(const AttrStmtNode* op) final {
+    if (op->attr_key == tvm::attr::kTarget) {
+      kernel_num_++;
+    }
+    StmtVisitor::VisitStmt_(op);
+  }
+  int kernel_num_ = 0;
+
+ private:
+  PrimFunc func_;
+};
+
 namespace transform {
 
 Pass SplitHostDevice() {
@@ -159,10 +175,12 @@ Pass SplitHostDevice() {
     for (const auto& [gvar, base_func] : mod->functions) {
       if (auto opt = base_func.as<PrimFunc>()) {
         PrimFunc func = opt.value();
+        KernelCounter counter(func);
+        counter(func->body);
 
         auto global_symbol = func->GetAttr<String>(tvm::attr::kGlobalSymbol);
         auto name_prefix = global_symbol.value_or(gvar->name_hint);
-        auto kernel_name = name_prefix + "_kernel";
+        auto kernel_name = name_prefix + "_kernel_" + std::to_string(counter.kernel_num_);
         auto var_supply = [&global_var_supply, &kernel_name]() -> GlobalVar {
           return global_var_supply->FreshGlobal(kernel_name, false);
         };

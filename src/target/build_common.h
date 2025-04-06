@@ -49,6 +49,7 @@ inline std::unordered_map<std::string, runtime::FunctionInfo> ExtractFuncInfo(co
     runtime::FunctionInfo info;
     for (size_t i = 0; i < f->params.size(); ++i) {
       info.arg_types.push_back(f->params[i].dtype());
+      info.param_names.push_back(f->params[i]->name_hint);
     }
     if (auto opt = f->GetAttr<Array<String>>(tir::attr::kKernelLaunchParams)) {
       for (const auto& tag : opt.value()) {

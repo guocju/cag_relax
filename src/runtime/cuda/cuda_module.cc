@@ -138,6 +138,10 @@ class CUDAModuleNode : public runtime::ModuleNode {
     return global;
   }
 
+ public:
+  std::vector<LaunchParams> saved_params_ = {};
+  std::vector<LaunchParams> params_with_offset_ = {};
+
  private:
   // the binary data
   std::string data_;
@@ -153,17 +157,47 @@ class CUDAModuleNode : public runtime::ModuleNode {
   std::mutex mutex_;
 };
 
+CUresult launch_p2p_kernels(int slice_num, std::vector<LaunchParams> params,
+                            std::vector<LaunchParams> params_with_offset) {
+  CUresult result;
+  for (int i = 0; i < slice_num; ++i) {
+    if (i % 2 == 0) {
+      for (size_t i = 0; i < params.size(); ++i) {
+        LaunchParams param = params[i];
+        result =
+            cuLaunchKernel(param.f, param.gridDimX, param.gridDimY, param.gridDimZ, param.blockDimX,
+                           param.blockDimY, param.blockDimZ, param.sharedMemBytes, param.hStream,
+                           param.kernelParams, param.extra);
+      }
+
+    } else {
+      for (size_t i = 0; i < params_with_offset.size(); ++i) {
+        LaunchParams param = params_with_offset[i];
+        result =
+            cuLaunchKernel(param.f, param.gridDimX, param.gridDimY, param.gridDimZ, param.blockDimX,
+                           param.blockDimY, param.blockDimZ, param.sharedMemBytes, param.hStream,
+                           param.kernelParams, param.extra);
+      }
+    }
+  }
+  return result;
+}
+
 // a wrapped function class to get packed func.
 class CUDAWrappedFunc {
  public:
   // initialize the CUDA function.
   void Init(CUDAModuleNode* m, ObjectPtr<Object> sptr, const std::string& func_name,
-            size_t num_void_args, const std::vector<std::string>& launch_param_tags) {
+            size_t num_void_args, const std::vector<std::string>& launch_param_tags, int slice_num,
+            std::vector<int> buffer_sizes, const std::vector<std::string>& param_names) {
     m_ = m;
     sptr_ = sptr;
     func_name_ = func_name;
     std::fill(fcache_.begin(), fcache_.end(), nullptr);
     launch_param_config_.Init(num_void_args, launch_param_tags);
+    slice_num_ = slice_num;
+    buffer_sizes_ = buffer_sizes;
+    param_names_ = param_names;
   }
   // invoke the function with void arguments
   void operator()(TVMArgs args, TVMRetValue* rv, void** void_args) const {
@@ -184,26 +218,77 @@ class CUDAWrappedFunc {
         }
       }
     }
+    CUresult result;
     CUstream strm = static_cast<CUstream>(CUDAThreadEntry::ThreadLocal()->stream);
-    CUresult result = cuLaunchKernel(fcache_[device_id], wl.grid_dim(0), wl.grid_dim(1),
-                                     wl.grid_dim(2), wl.block_dim(0), wl.block_dim(1),
-                                     wl.block_dim(2), wl.dyn_shmem_size, strm, void_args, nullptr);
-    if (result != CUDA_SUCCESS && result != CUDA_ERROR_DEINITIALIZED) {
-      const char* msg;
-      cuGetErrorName(result, &msg);
-      std::ostringstream os;
-      os << "CUDALaunch Error: " << msg << "\n"
-         << " grid=(" << wl.grid_dim(0) << "," << wl.grid_dim(1) << "," << wl.grid_dim(2) << "), "
-         << " block=(" << wl.block_dim(0) << "," << wl.block_dim(1) << "," << wl.block_dim(2)
-         << ")\n";
-      std::string cuda = m_->GetSource("");
-      if (cuda.length() != 0) {
-        os << "// func_name=" << func_name_ << "\n"
-           << "// CUDA Source\n"
-           << "// -----------\n"
-           << cuda;
+
+    // eg:p2p_gpu_kernel_2_0
+    if (func_name_.compare(0, 3, "p2p") == 0 && slice_num_ > 0) {
+      void** args_with_offset = void_args;
+      for (int i = 0; i < param_names_.size(); i++) {
+        std::string arg_name = param_names_[i];
+        int asc_code = static_cast<int>(arg_name[0]);
+        if (arg_name.size() == 1 && 64 < asc_code < 91) {
+          int offset = buffer_sizes_[asc_code - 65];
+          args_with_offset[i] = static_cast<void*>(static_cast<char*>(void_args[i]) + offset);
+        }
       }
-      LOG(FATAL) << os.str();
+      LaunchParams launch_params{fcache_[device_id],
+                                 wl.grid_dim(0),
+                                 wl.grid_dim(1),
+                                 wl.grid_dim(2),
+                                 wl.block_dim(0),
+                                 wl.block_dim(1),
+                                 wl.block_dim(2),
+                                 wl.dyn_shmem_size,
+                                 strm,
+                                 void_args,
+                                 nullptr};
+      LaunchParams launch_params_with_offset{fcache_[device_id],
+                                             wl.grid_dim(0),
+                                             wl.grid_dim(1),
+                                             wl.grid_dim(2),
+                                             wl.block_dim(0),
+                                             wl.block_dim(1),
+                                             wl.block_dim(2),
+                                             wl.dyn_shmem_size,
+                                             strm,
+                                             args_with_offset,
+                                             nullptr};
+      m_->saved_params_.push_back(launch_params);
+      m_->params_with_offset_.push_back(launch_params_with_offset);
+      size_t last_underscore = func_name_.rfind('_');
+      size_t second_last_underscore = func_name_.rfind('_', last_underscore - 1);
+      std::string num1_str = func_name_.substr(second_last_underscore + 1,
+                                               last_underscore - second_last_underscore - 1);
+      std::string num2_str = func_name_.substr(last_underscore + 1);
+      int num1 = std::stoi(num1_str);
+      int num2 = std::stoi(num2_str);
+      if (num1 == num2 + 1) {
+        result = launch_p2p_kernels(slice_num_, m_->saved_params_, m_->params_with_offset_);
+        m_->saved_params_ = {};
+        m_->params_with_offset_ = {};
+      }
+    } else {
+      result = cuLaunchKernel(fcache_[device_id], wl.grid_dim(0), wl.grid_dim(1), wl.grid_dim(2),
+                              wl.block_dim(0), wl.block_dim(1), wl.block_dim(2), wl.dyn_shmem_size,
+                              strm, void_args, nullptr);
+      if (result != CUDA_SUCCESS && result != CUDA_ERROR_DEINITIALIZED) {
+        const char* msg;
+        cuGetErrorName(result, &msg);
+        std::ostringstream os;
+        os << "CUDALaunch Error: " << msg << "\n"
+           << " grid=(" << wl.grid_dim(0) << "," << wl.grid_dim(1) << "," << wl.grid_dim(2) << "), "
+           << " block=(" << wl.block_dim(0) << "," << wl.block_dim(1) << "," << wl.block_dim(2)
+           << ")\n";
+        std::string cuda = m_->GetSource("");
+        if (cuda.length() != 0) {
+          os << "// func_name=" << func_name_ << "\n"
+             << "// CUDA Source\n"
+             << "// -----------\n"
+             << cuda;
+        }
+        LOG(FATAL) << os.str();
+      }
     }
   }
 
@@ -219,6 +304,9 @@ class CUDAWrappedFunc {
   mutable std::array<CUfunction, kMaxNumGPUs> fcache_;
   // launch parameters configuration
   LaunchParamConfig launch_param_config_;
+  std::vector<int> buffer_sizes_;
+  std::vector<std::string> param_names_;
+  int slice_num_;
 };
 
 class CUDAPrepGlobalBarrier {
@@ -256,7 +344,8 @@ PackedFunc CUDAModuleNode::GetFunction(const String& name, const ObjectPtr<Objec
   if (it == fmap_.end()) return PackedFunc();
   const FunctionInfo& info = it->second;
   CUDAWrappedFunc f;
-  f.Init(this, sptr_to_self, name, info.arg_types.size(), info.launch_param_tags);
+  f.Init(this, sptr_to_self, name, info.arg_types.size(), info.launch_param_tags, info.slice_num,
+         info.buffer_sizes, info.param_names);
   return PackFuncVoidAddr(f, info.arg_types);
 }
 

@@ -76,16 +76,34 @@ std::string NameSupplyNode::GetUniqueName(std::string name, bool add_underscore)
   for (size_t i = 0; i < name.size(); ++i) {
     if (name[i] == '.') name[i] = '_';
   }
-  auto it = name_map.find(name);
-  if (it != name_map.end()) {
-    auto new_name = name;
-    while (!name_map.insert({new_name, 0}).second) {
-      std::ostringstream os;
-      os << name << (add_underscore ? "_" : "") << (++it->second);
-      new_name = os.str();
+  if (name.compare(0, 3, "p2p") == 0) {
+    std::ostringstream os;
+    os << name << (add_underscore ? "_" : "") << "0";
+    name = os.str();
+
+    auto it = name_map.find(name);
+    if (it != name_map.end()) {
+      auto new_name = name;
+      while (!name_map.insert({new_name, 0}).second) {
+        std::ostringstream os;
+        os << name.substr(0, name.find_last_not_of("0123456789") + 1) << (++it->second);
+        new_name = os.str();
+      }
+      return new_name;
     }
-    return new_name;
+  } else {
+    auto it = name_map.find(name);
+    if (it != name_map.end()) {
+      auto new_name = name;
+      while (!name_map.insert({new_name, 0}).second) {
+        std::ostringstream os;
+        os << name << (add_underscore ? "_" : "") << (++it->second);
+        new_name = os.str();
+      }
+      return new_name;
+    }
   }
+
   name_map[name] = 0;
   return name;
 }
