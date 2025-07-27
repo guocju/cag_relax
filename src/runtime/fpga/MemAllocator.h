@@ -22,7 +22,7 @@ class MemAllocator {
     free_mem = FPGA_MEMORY_SIZE;
     bitmap.resize(BLOCK_COUNT, false);
     ptr_sizes = new size_t[BLOCK_COUNT]();
-    base_address = nullptr;
+    base_address = reinterpret_cast<uint8_t*>(0x00001000);
   }
 
   ~MemAllocator() { delete[] ptr_sizes; }

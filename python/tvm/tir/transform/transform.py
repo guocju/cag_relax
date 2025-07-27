@@ -503,6 +503,41 @@ def AnnotateDeviceRegions():
     """
     return _ffi_api.AnnotateDeviceRegions()  # type: ignore
 
+def ExtractBufferShape():
+    """
+    Returns
+    -------
+    fpass : tvm.transform.Pass
+        The result pass
+    """
+    return _ffi_api.ExtractBufferShape()  # type: ignore
+
+def ReplaceMatchBuffer():
+    """
+    Returns
+    -------
+    fpass : tvm.transform.Pass
+        The result pass
+    """
+    return _ffi_api.ReplaceMatchBuffer()  # type: ignore
+
+def AddThreadBinding():
+    """
+    Returns
+    -------
+    fpass : tvm.transform.Pass
+        The result pass
+    """
+    return _ffi_api.AddThreadBinding()  # type: ignore
+
+def MarkChildFunctions():
+    """
+    Returns
+    -------
+    fpass : tvm.transform.Pass
+        The result pass
+    """
+    return _ffi_api.MarkChildFunctions()  # type: ignore
 
 def SplitHostDevice():
     """Split the function into a host function and device functions.

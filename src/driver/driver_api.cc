@@ -571,6 +571,7 @@ transform::Sequential MixedModulePassManager(IRModule mixed_mod, Target target) 
 
   // FPComputeLegalize uses the target attrs added by BindTarget, so it must come first
   mixed_pass_list.push_back(tir::transform::BindTarget(target));
+  mixed_pass_list.push_back(tir::transform::MarkChildFunctions());
   mixed_pass_list.push_back(tir::transform::FP8ComputeLegalize());
 
   // VerifyVTCMLimit must occur before LowerVtcmAlloc
@@ -676,12 +677,15 @@ transform::Sequential DeviceModulePassManager(IRModule mixed_mod, Target target)
   device_pass_list.push_back(tir::transform::Filter(fcond));
 
   device_pass_list.push_back(tir::transform::BindTarget(target));
-
   device_pass_list.push_back(tir::transform::LowerWarpMemory());
   device_pass_list.push_back(tir::transform::Simplify());
   device_pass_list.push_back(tir::transform::LowerCustomDatatypes());
   device_pass_list.push_back(tir::transform::LowerDeviceStorageAccessInfo());
   device_pass_list.push_back(tir::transform::LowerIntrin());
+  String target_name = target->kind->name;
+  if (target_name == "fpga") {
+    device_pass_list.push_back(tir::transform::AnnotateBufferInfoPass());
+  }
 
   return transform::Sequential(device_pass_list);
 }

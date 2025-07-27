@@ -128,9 +128,7 @@ constexpr const char* kGlobalSymbol = "global_symbol";
 Input and output buffer sizes*/
 constexpr const char* kP2Psizes = "p2p_sizes";
 // Type: Integer
-constexpr const char* kP2PSliceNumber = "slice_num";
-// Type: Integer
-constexpr const char* kP2ParamNumber = "param_num";
+constexpr const char* kP2PArgTypes = "arg_kinds";
 }  // namespace attr
 
 /*!
@@ -151,7 +149,8 @@ class BaseFuncNode : public RelayExprNode {
    * \brief Get a function attribute.
    *
    * \param attr_key The attribute key.
-   * \param default_value The default value if the key does not exist, defaults to nullptr.
+   * \param default_value The default value if the key does not exist, defaults
+   * to nullptr.
    *
    * \return The result
    *
@@ -167,14 +166,16 @@ class BaseFuncNode : public RelayExprNode {
    * \endcode
    */
   template <typename TObjectRef>
-  Optional<TObjectRef> GetAttr(
-      const std::string& attr_key,
-      Optional<TObjectRef> default_value = Optional<TObjectRef>(nullptr)) const {
+  Optional<TObjectRef> GetAttr(const std::string& attr_key,
+                               Optional<TObjectRef> default_value =
+                                   Optional<TObjectRef>(nullptr)) const {
     return attrs.GetAttr(attr_key, default_value);
   }
-  // variant that uses TObjectRef to enable implicit conversion to default value.
+  // variant that uses TObjectRef to enable implicit conversion to default
+  // value.
   template <typename TObjectRef>
-  Optional<TObjectRef> GetAttr(const std::string& attr_key, TObjectRef default_value) const {
+  Optional<TObjectRef> GetAttr(const std::string& attr_key,
+                               TObjectRef default_value) const {
     return GetAttr<TObjectRef>(attr_key, Optional<TObjectRef>(default_value));
   }
 
@@ -197,7 +198,9 @@ class BaseFuncNode : public RelayExprNode {
    *
    * \endcode
    */
-  bool HasNonzeroAttr(const std::string& attr_key) const { return attrs.HasNonzeroAttr(attr_key); }
+  bool HasNonzeroAttr(const std::string& attr_key) const {
+    return attrs.HasNonzeroAttr(attr_key);
+  }
   /*!
    * \brief Get the type of the linkage.
    *

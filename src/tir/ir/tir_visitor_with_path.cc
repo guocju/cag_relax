@@ -412,6 +412,11 @@ void TIRVisitorWithPath::VisitExpr_(const NotNode* op, ObjectPath path) {
   Visit(op->a, path->Attr("a"));
 }
 
+void TIRVisitorWithPath::VisitExpr_(const CallTIRNode* op, ObjectPath path) {
+  Visit(op->func, path->Attr("func"));
+  Visit(op->args, path->Attr("args"));
+}
+
 void TIRVisitorWithPath::VisitExpr_(const SelectNode* op, ObjectPath path) {
   Visit(op->condition, path->Attr("condition"));
   Visit(op->true_value, path->Attr("true_value"));

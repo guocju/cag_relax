@@ -99,17 +99,13 @@ class HostDeviceSplitter : public StmtMutator {
     device_func = WithAttrs(std::move(device_func), {{tvm::attr::kTarget, device_target},
                                                      {tir::attr::kNoAlias, Bool(true)},
                                                      {tir::attr::kIsGlobalFunc, Bool(true)}});
-    auto buffer_sizes = func_->GetAttr<Array<Integer>>(tvm::attr::kP2Psizes);
-    auto slice_number = func_->GetAttr<Integer>(tvm::attr::kP2PSliceNumber);
-    auto param_num = func_->GetAttr<Integer>(tvm::attr::kP2ParamNumber);
+    auto buffer_sizes = func_->GetAttr<Array<Array<Integer>>>(tvm::attr::kP2Psizes);
+    auto arg_types = func_->GetAttr<Array<Integer>>(tvm::attr::kP2PArgTypes);
     if (buffer_sizes.defined()) {
       device_func = WithAttrs(std::move(device_func), {{tvm::attr::kP2Psizes, buffer_sizes}});
     }
-    if (slice_number.defined()) {
-      device_func = WithAttrs(std::move(device_func), {{tvm::attr::kP2PSliceNumber, slice_number}});
-    }
-    if (param_num.defined()) {
-      device_func = WithAttrs(std::move(device_func), {{tvm::attr::kP2ParamNumber, param_num}});
+    if (arg_types.defined()) {
+      device_func = WithAttrs(std::move(device_func), {{tvm::attr::kP2PArgTypes, arg_types}});
     }
 
     GlobalVar kernel_symbol_global = var_supply_();

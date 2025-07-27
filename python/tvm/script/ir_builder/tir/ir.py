@@ -79,12 +79,13 @@ from tvm.tir.expr import (
     StringImm,
     Sub,
     Var,
+    CallTIR,
 )
 from tvm.tir.generic import cast
 
 from . import _ffi_api, frame
 from .external_kernel import call_kernel
-
+from tvm.ir.expr import GlobalVar
 # pylint: enable=unused-import
 
 
@@ -2256,4 +2257,5 @@ __all__ = [
     "vscale",
     "get_active_lane_mask",
     "call_kernel",
+    "CallTIR",
 ]

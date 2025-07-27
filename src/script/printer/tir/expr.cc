@@ -123,6 +123,21 @@ TVM_STATIC_IR_FUNCTOR(IRDocsifier, vtable)
     });
 
 TVM_STATIC_IR_FUNCTOR(IRDocsifier, vtable)
+    .set_dispatch<tir::CallTIR>("", [](tir::CallTIR call, ObjectPath p, IRDocsifier d) -> Doc {
+      ExprDoc func_doc = d->AsDoc<ExprDoc>(call->func, p->Attr("func"));
+      Array<ExprDoc> arg_docs;
+      for (size_t i = 0; i < call->args.size(); ++i) {
+        arg_docs.push_back(d->AsDoc<ExprDoc>(call->args[i], p->Attr("args")->ArrayIndex(i)));
+      }
+      Array<ExprDoc> doc_args;
+      doc_args.push_back(func_doc);
+      for (ExprDoc arg : arg_docs) {
+        doc_args.push_back(arg);
+      }
+      return TIR(d, "CallTIR")->Call(doc_args);
+    });
+
+TVM_STATIC_IR_FUNCTOR(IRDocsifier, vtable)
     .set_dispatch<tir::Select>("", [](tir::Select select, ObjectPath p, IRDocsifier d) -> Doc {
       return TIR(d, "Select")
           ->Call({
@@ -407,6 +422,7 @@ TVM_SCRIPT_REPR(tir::GENode, ReprPrintTIR);
 TVM_SCRIPT_REPR(tir::AndNode, ReprPrintTIR);
 TVM_SCRIPT_REPR(tir::OrNode, ReprPrintTIR);
 TVM_SCRIPT_REPR(tir::NotNode, ReprPrintTIR);
+TVM_SCRIPT_REPR(tir::CallTIRNode, ReprPrintTIR);
 TVM_SCRIPT_REPR(tir::SelectNode, ReprPrintTIR);
 TVM_SCRIPT_REPR(tir::RampNode, ReprPrintTIR);
 TVM_SCRIPT_REPR(tir::BroadcastNode, ReprPrintTIR);

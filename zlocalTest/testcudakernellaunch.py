@@ -63,7 +63,7 @@ class TestP2P:
     
     
     @R.function(pure=False)
-    def foo(A: R.Tensor((2,), "int8"), B: R.Tensor((1, 256, 256), "float32"),
+    def foo(A: R.Tensor((1,), "int32"), B: R.Tensor((1, 256, 256), "float32"),
             C: R.Tensor((1, 256, 256), "float32"),D: R.Tensor((1, 256, 256), "float32"),
             E: R.Tensor((1, 256, 256), "float32"),F: R.Tensor((1, 256, 256), "float32"),
             G: R.Tensor((1, 256, 256), "float32"),
@@ -77,8 +77,6 @@ class TestP2P:
         E1 = R.to_vdevice(E, "cuda")
         F1 = R.to_vdevice(F, "cuda")
         G1 = R.to_vdevice(G, "cuda")
-        slice_num = T.int32(slice_number)
-        slice_num = R.call_packed("vm.builtin.p2p_descriptor_transfer", slice_num, sinfo_args=None)
         res = R.call_tir(
             TestP2P.p2p_gpu_process, 
             (A1, B1, C1, D1, E1, F1, G1, ),

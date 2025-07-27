@@ -95,6 +95,10 @@ void ExprVisitor::VisitExpr_(const CastNode* op) { this->VisitExpr(op->value); }
 
 void ExprVisitor::VisitExpr_(const NotNode* op) { this->VisitExpr(op->a); }
 
+void ExprVisitor::VisitExpr_(const CallTIRNode* op) {
+  VisitArray(op->args, [this](const PrimExpr& e) { this->VisitExpr(e); });
+}
+
 void ExprVisitor::VisitExpr_(const SelectNode* op) {
   this->VisitExpr(op->condition);
   this->VisitExpr(op->true_value);
@@ -240,6 +244,23 @@ PrimExpr ExprMutator::VisitExpr_(const NotNode* op) {
     return GetRef<PrimExpr>(op);
   } else {
     return Not(a);
+  }
+}
+
+PrimExpr ExprMutator::VisitExpr_(const CallTIRNode* op) {
+  Array<PrimExpr> new_args;
+  bool changed = false;
+  for (PrimExpr arg : op->args) {
+    PrimExpr new_arg = this->VisitExpr(arg);
+    if (!new_arg.same_as(arg)) {
+      changed = true;
+    }
+    new_args.push_back(new_arg);
+  }
+  if (!changed) {
+    return GetRef<PrimExpr>(op);
+  } else {
+    return CallTIR(op->func, new_args, op->span);
   }
 }
 

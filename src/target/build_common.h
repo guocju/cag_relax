@@ -56,19 +56,21 @@ inline std::unordered_map<std::string, runtime::FunctionInfo> ExtractFuncInfo(co
         info.launch_param_tags.push_back(tag);
       }
     }
-    if (auto buffer_sizes = f->GetAttr<Array<Integer>>(tvm::attr::kP2Psizes)) {
-      for (const auto& size : buffer_sizes.value()) {
-        int size_value = size.IntValue();
-        info.buffer_sizes.push_back(size_value);
+    if (auto buffer_sizes = f->GetAttr<Array<Array<Integer>>>(tvm::attr::kP2Psizes)) {
+      for (const auto& size_array : buffer_sizes.value()) {
+        std::vector<int> inner_vector;
+        for (const auto& size : size_array) {
+          int size_value = size.IntValue();
+          inner_vector.push_back(size_value);
+        }
+        info.buffer_sizes.push_back(inner_vector);
       }
     }
-    if (auto slice_num = f->GetAttr<Integer>(tvm::attr::kP2PSliceNumber)) {
-      int slice_number = slice_num.value().IntValue();
-      info.slice_num = slice_number;
-    }
-    if (auto param_num = f->GetAttr<Integer>(tvm::attr::kP2ParamNumber)) {
-      int param_number = param_num.value().IntValue();
-      info.param_num = param_number;
+    if (auto arg_types = f->GetAttr<Array<Integer>>(tvm::attr::kP2PArgTypes)) {
+      for (const auto& tag : arg_types.value()) {
+        int buffer_type = tag.IntValue();
+        info.buffer_types.push_back(buffer_type);
+      }
     }
     auto global_symbol = f->GetAttr<String>(tvm::attr::kGlobalSymbol);
     fmap[static_cast<std::string>(global_symbol.value())] = info;

@@ -563,6 +563,49 @@ class Not : public PrimExpr {
 };
 
 /*!
+ * \brief CallTIR represents a call from one TIR kernel to another (e.g., dynamic parallelism in
+ * CUDA).
+ */
+class CallTIRNode : public PrimExprNode {
+ public:
+  /*! \brief The function being called (child kernel) */
+  GlobalVar func;
+  /*! \brief The arguments passed to the child kernel */
+  Array<PrimExpr> args;
+
+  void VisitAttrs(AttrVisitor* v) {
+    v->Visit("dtype", &dtype);  // still need a dtype
+    v->Visit("func", &func);
+    v->Visit("args", &args);
+    v->Visit("span", &span);
+  }
+
+  bool SEqualReduce(const CallTIRNode* other, SEqualReducer equal) const {
+    return equal(dtype, other->dtype) && equal(func, other->func) && equal(args, other->args);
+  }
+
+  void SHashReduce(SHashReducer hash_reduce) const {
+    hash_reduce(dtype);
+    hash_reduce(func);
+    hash_reduce(args);
+  }
+
+  static constexpr const char* _type_key = "tir.CallTIR";
+  TVM_DECLARE_FINAL_OBJECT_INFO(CallTIRNode, PrimExprNode);
+};
+
+/*!
+ * \brief Managed reference to CallTIRNode
+ */
+class CallTIR : public PrimExpr {
+ public:
+  TVM_DLL CallTIR(GlobalVar func, Array<PrimExpr> args, Span span = Span());
+
+  TVM_DEFINE_OBJECT_REF_METHODS(CallTIR, PrimExpr, CallTIRNode);
+  TVM_DEFINE_OBJECT_REF_COW_METHOD(CallTIRNode);
+};
+
+/*!
  * \brief return true_value if condition is true, otherwise return false_value.
  * \note Both true_value and false_value could be evaluated
  *       regardless of the condition value.

@@ -57,11 +57,6 @@ class FPGADeviceAPI final : public DeviceAPI {
     }
   }
 
-  void transfer_descriptor(int slice_number) {
-    translate_and_transfer();
-    launch_p2p_kernel(slice_number);
-  }
-
   static FPGADeviceAPI* Global() {
     static FPGADeviceAPI* inst = new FPGADeviceAPI();
     return inst;

@@ -9,9 +9,7 @@ namespace tvm {
 namespace runtime {
 
 #define FPGA_CALL(func) \
-  {                     \
-    (func);             \
-  }
+  { (func); }
 
 inline void fpgaSetDevice(int id) { return; }
 

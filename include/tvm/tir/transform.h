@@ -256,6 +256,10 @@ TVM_DLL Pass RemapThreadAxis(Map<String, IterVar> axis_map);
  */
 TVM_DLL Pass LowerCustomDatatypes();
 
+TVM_DLL Pass MarkChildFunctions();
+
+TVM_DLL Pass AnnotateBufferInfoPass();
+
 /*!
  * \brief Decorate all the function's body as device function.
  *

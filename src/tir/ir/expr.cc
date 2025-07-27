@@ -421,6 +421,27 @@ TVM_REGISTER_GLOBAL("tir.Not").set_body_typed([](PrimExpr a, Span span) { return
 
 TVM_REGISTER_NODE_TYPE(NotNode);
 
+// CallTIR
+CallTIR::CallTIR(GlobalVar func, Array<PrimExpr> args, Span span) {
+  ICHECK(func.defined()) << "GlobalVar func is undefined";
+  ICHECK(!args.empty()) << "Arguments cannot be empty";
+
+  ObjectPtr<CallTIRNode> node = make_object<CallTIRNode>();
+  node->func = std::move(func);
+  node->args = std::move(args);
+  node->span = std::move(span);
+  node->dtype = DataType::Void();
+
+  data_ = std::move(node);
+}
+
+TVM_REGISTER_GLOBAL("tir.CallTIR")
+    .set_body_typed([](GlobalVar func, Array<PrimExpr> args, Span span) {
+      return CallTIR(func, args, span);
+    });
+
+TVM_REGISTER_NODE_TYPE(CallTIRNode);
+
 // Select
 Select::Select(PrimExpr condition, PrimExpr true_value, PrimExpr false_value, Span span) {
   ICHECK(condition.defined()) << "ValueError: condition is undefined";

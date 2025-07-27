@@ -236,6 +236,7 @@ class TVMScriptPrinter : public StmtFunctor<Doc(const Stmt&)>,
   Doc VisitExpr_(const AndNode* op, ExprPrecedence* out_precedence) override;
   Doc VisitExpr_(const OrNode* op, ExprPrecedence* out_precedence) override;
   Doc VisitExpr_(const NotNode* op, ExprPrecedence* out_precedence) override;
+  Doc VisitExpr_(const CallTIRNode* op, ExprPrecedence* out_precedence) override;
   Doc VisitExpr_(const SelectNode* op, ExprPrecedence* out_precedence) override;
   Doc VisitExpr_(const IntImmNode* op, ExprPrecedence* out_precedence) override;
   Doc VisitExpr_(const FloatImmNode* op, ExprPrecedence* out_precedence) override;
@@ -880,6 +881,23 @@ Doc TVMScriptPrinter::VisitExpr_(const NotNode* op, ExprPrecedence* out_preceden
   *out_precedence = ExprPrecedence::kIdentity;
   Doc doc;
   doc << "not(" << Print(op->a) << ")";
+  return doc;
+}
+
+Doc TVMScriptPrinter::VisitExpr_(const CallTIRNode* op, ExprPrecedence* out_precedence) {
+  *out_precedence = ExprPrecedence::kIdentity;
+  Doc doc;
+  doc << tir_prefix_ << ".CallTIR(";
+  doc << Print(op->func) << ", ";
+  doc << "[";
+  for (size_t i = 0; i < op->args.size(); ++i) {
+    if (i != 0) {
+      doc << ", ";
+    }
+    doc << Print(op->args[i]);
+  }
+  doc << "]";
+  doc << ")";
   return doc;
 }
 

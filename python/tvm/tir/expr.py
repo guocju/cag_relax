@@ -32,7 +32,7 @@ from typing import List, Optional, Union
 import tvm._ffi
 import tvm.ir._ffi_api
 from tvm import ir
-from tvm.ir import Op, PrimExpr
+from tvm.ir import Op, PrimExpr, GlobalVar
 from tvm.ir.base import Span
 from tvm.runtime import DataType, DataTypeCode, Object, ObjectGeneric, Scriptable, const
 
@@ -1041,6 +1041,34 @@ class Not(LogicalExpr):
 
     def __init__(self, a: PrimExpr, span: Optional[Span] = None) -> None:
         self.__init_handle_by_constructor__(_ffi_api.Not, a, span)  # type: ignore
+
+
+@tvm._ffi.register_object("tir.CallTIR")
+class CallTIR(PrimExpr):
+    """CallTIR node.
+
+    This node represents a call to a child kernel using CUDA dynamic
+    parallelism. It accepts arguments that are either PrimExpr, Buffer, or Var.
+    If a Buffer is passed, it will automatically be converted to its `data` field.
+
+    Parameters
+    ----------
+    func : GlobalVar
+        The global variable representing the child kernel function.
+    args : List[Union[PrimExpr, Buffer, Var]]
+        The arguments passed to the child kernel. If an argument is a Buffer,
+        its `data` field will be used.
+    span : Optional[Span]
+        The location of this expression in the source code.
+    """
+    def __init__(self, func: GlobalVar, args: List[Union[PrimExpr, Buffer, Var]], span: Optional[Span] = None) -> None:
+        new_args: List[PrimExpr] = []
+        for arg in args:
+            if isinstance(arg, Buffer):
+                new_args.append(arg.data)
+            else:
+                new_args.append(arg)
+        self.__init_handle_by_constructor__(_ffi_api.CallTIR, func, new_args, span)  # type: ignore
 
 
 @tvm._ffi.register_object("tir.Select")

@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <fcntl.h>
+#include <p2p.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -196,14 +197,72 @@ inline void translate_and_transfer() {
   */
 }
 inline void launch_p2p_kernel(int slice_number) {}
-inline void fpgaModuleLaunchKernel(int data_size, int slice_num, int* buffer_sizes, int param_num,
-                                   void** ptrs, int ptr_num, int buffer_num) {
-  /*
-  transferCtrlKernelCode(code, data, addr);
-  TransferParams(ptrs, ptr_num, data_size, buffer_sizes, param_num, buffer_num, slice_num);
-  mmap_fpga_register();
-  StartCtrlKernel();
-  */
+
+enum class FPGADataType {
+  // 无符号整型
+  UInt8,
+  UInt16,
+  UInt32,
+  UInt64,
+
+  // 有符号整型
+  Int8,
+  Int16,
+  Int32,
+  Int64,
+
+  // 浮点型
+  Float16,
+  Float32,
+  Float64,
+
+  // 其他常用类型
+  Handle  // 指针类型
+};
+
+// void WriteToBRAM(const uint8_t* data, int size);  // 外部定义
+// void launchRISCV();                               // 外部定义
+
+inline void fpgaModuleLaunchKernel(int* buffer_sizes, int* buffer_kinds, void** ptrs, int ptr_num) {
+  // constexpr int kMaxParamBufferSize = 4096;
+  // uint8_t param_buffer[kMaxParamBufferSize];
+  // int offset = 0;
+
+  // for (int i = 0; i < ptr_num; ++i) {
+  //   int size = buffer_sizes[i];
+  //   FPGADataType dtype = static_cast<FPGADataType>(buffer_kinds[i]);
+
+  //   // 如果是 handle（即指针），写入 8 字节地址
+  //   if (dtype == FPGADataType::Handle) {
+  //     uintptr_t addr = reinterpret_cast<uintptr_t>(ptrs[i]);
+  //     assert(offset + 8 <= kMaxParamBufferSize);
+  //     memcpy(param_buffer + offset, &addr, 8);
+  //     offset += 8;
+  //   } else {
+  //     // 否则复制 value 内容（比如 int32、float32）
+  //     assert(offset + size <= kMaxParamBufferSize);
+  //     memcpy(param_buffer + offset, ptrs[i], size);
+  //     offset += size;
+  //   }
+  // }
+
+  // // 写入 FPGA 参数区（BRAM 或 AXI-Lite）
+  // WriteToBRAM(param_buffer, offset);
+
+  // // 启动执行
+  // launchRISCV();
+}
+
+inline void transfer_descriptor(void* head_ptr, void* tail_ptr, void** ptr_arr, int ptr_num,
+                                size_t gpu_bank_size) {
+  CUdeviceptr cuda_head_ptr = reinterpret_cast<CUdeviceptr>(head_ptr);
+  CUdeviceptr cuda_tail_ptr = reinterpret_cast<CUdeviceptr>(tail_ptr);
+  CUdeviceptr* cu_ptrs = reinterpret_cast<CUdeviceptr*>(ptr_arr);
+  int fd_i = open(DEVICE_TO_HOST, O_WRONLY);
+  int fd_o = open(HOST_TO_DEVICE, O_WRONLY);
+  transfer_desc(cuda_head_ptr, cuda_tail_ptr, cu_ptrs, ptr_num, gpu_bank_size, fd_i, fd_o);
+  close(fd_i);
+  close(fd_o);
 }
 
 #endif

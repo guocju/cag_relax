@@ -275,7 +275,8 @@ TVM_REGISTER_GLOBAL("vm.builtin.check_shape_info").set_body_typed(CheckShapeInfo
 /*!
  * \brief Builtin function to check if arg is PrimValue(dtype)
  * \param arg The input argument.
- * \param dtype Expected dtype of the PrimValue.  Can be DataType::Void() for unknown dtype.
+ * \param dtype Expected dtype of the PrimValue.  Can be DataType::Void() for
+ * unknown dtype.
  * \param err_ctx Additional context if error occurs.
  */
 void CheckPrimValueInfo(TVMArgValue arg, DataType dtype, Optional<String> err_ctx) {
@@ -423,20 +424,6 @@ TVM_REGISTER_GLOBAL("vm.builtin.to_device")
       Device dst_device = {(DLDeviceType)dev_type, dev_id};
       return data.CopyTo(dst_device);
     });
-
-TVM_REGISTER_GLOBAL("vm.builtin.p2p_descriptor_transfer").set_body_typed([](NDArray slice_num) {
-  ShapeTuple shape = slice_num.Shape();
-  ICHECK_EQ(shape.size(), 1) << "NDArray slice_num only has 1 dimension";
-  ICHECK_EQ(shape[0], 1) << "Shape of NDArray slice_num should be (1,)";
-  ICHECK_EQ(slice_num->dtype.code, 0) << "NDArray slice_num must be int32";
-  ICHECK_EQ(slice_num->dtype.bits, 32) << "NDArray slice_num must be int32";
-  int32_t* data_ptr = static_cast<int32_t*>(slice_num->data);
-  int number = data_ptr[0];
-  Device fpga_device = {(DLDeviceType)17, 0};
-
-  // DeviceAPI::Get(fpga_device)->transfer_descriptor(number);
-  return slice_num;
-});
 
 /*!
  * \brief Load the scalar value in cond and return the result value.
@@ -593,7 +580,8 @@ TVM_REGISTER_GLOBAL("vm.builtin.ensure_zero_offset").set_body_typed([](NDArray d
 //--------------------------------------------------
 extern "C" {
 /*!
- * \brief Backend function to get anylist item and set into Packed Func call arg stack.
+ * \brief Backend function to get anylist item and set into Packed Func call arg
+ * stack.
  *
  * \param anylist The handle to the anylist, backed by TVMRetValue*
  * \param int The index.
@@ -605,7 +593,8 @@ extern "C" {
 TVM_DLL int TVMBackendAnyListSetPackedArg(void* anylist, int index, TVMValue* args, int* type_codes,
                                           int arg_offset);
 /*!
- * \brief Backend function to get anylist item and set into Packed Func call arg stack.
+ * \brief Backend function to get anylist item and set into Packed Func call arg
+ * stack.
  *
  * \param anylist The handle to the anylist, backed by TVMRetValue*
  * \param int The index.
@@ -613,7 +602,8 @@ TVM_DLL int TVMBackendAnyListSetPackedArg(void* anylist, int index, TVMValue* ar
 TVM_DLL int TVMBackendAnyListResetItem(void* anylist, int index);
 
 /*!
- * \brief Backend function to set anylist item by moving from packed func return.
+ * \brief Backend function to set anylist item by moving from packed func
+ * return.
  *
  * \param anylist The handle to the anylist, backed by TVMRetValue*
  * \param int The index.

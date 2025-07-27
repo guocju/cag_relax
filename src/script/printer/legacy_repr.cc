@@ -448,6 +448,16 @@ TVM_STATIC_IR_FUNCTOR(ReprLegacyPrinter, vtable)
     });
 
 TVM_STATIC_IR_FUNCTOR(ReprLegacyPrinter, vtable)
+    .set_dispatch<CallTIRNode>([](const ObjectRef& node, ReprLegacyPrinter* p) {
+      auto* op = static_cast<const CallTIRNode*>(node.get());
+      (*p) << "CallTIR(";
+      p->Print(op->func);
+      (*p) << ", ";
+      p->Print(op->args);
+      (*p) << ")";
+    });
+
+TVM_STATIC_IR_FUNCTOR(ReprLegacyPrinter, vtable)
     .set_dispatch<SelectNode>([](const ObjectRef& node, ReprLegacyPrinter* p) {
       auto* op = static_cast<const SelectNode*>(node.get());
       (*p) << "select(";

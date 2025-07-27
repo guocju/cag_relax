@@ -217,7 +217,7 @@ def run_passes(mod):
 
 def test_spmv_gpu_long_lines():
     mod = spmv_gpu_long_lines(128)
-    mod = run_passes(mod)
+    # mod = run_passes(mod)
     f = tvm.build(mod, target="cuda")
     ROW = 80
     COL = 80
@@ -239,12 +239,13 @@ def test_spmv_gpu_long_lines():
 
 
 def test_spmv_gpu_short_easier_lines():
+    mod = spmv_gpu_short_lines_easier(128)
     with tvm.transform.PassContext(
         opt_level=0,
         config={"tir.disable_storage_rewrite": True},
         disabled_pass=["tir.LowerAutoCopy"],
     ):
-        f = tvm.build(spmv_gpu_short_lines_easier(128), target="cuda")
+        f = tvm.build(mod, target="cuda")
 
     ROW = 80
     COL = 80
@@ -271,5 +272,5 @@ def test_spmv_gpu_short_easier_lines():
 
 
 if __name__ == "__main__":
-    test_spmv_gpu_long_lines()
-    # test_spmv_gpu_short_easier_lines()
+    # test_spmv_gpu_long_lines()
+    test_spmv_gpu_short_easier_lines()

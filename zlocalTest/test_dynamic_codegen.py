@@ -14,9 +14,11 @@ def run_passes(mod):
     mod = tvm.tir.transform.LowerThreadAllreduce()(mod)
     mod = tvm.tir.transform.AnnotateDeviceRegions()(mod)
     mod = tvm.tir.transform.SplitHostDevice()(mod)
-    mod = tvm.tir.transform.LowerWarpMemory()(mod)
+    # mod = tvm.tir.transform.LowerWarpMemory()(mod)
     mod = tvm.tir.transform.ExtractBufferShape()(mod)
     mod = tvm.tir.transform.ReplaceMatchBuffer()(mod)
+    mod = tvm.tir.transform.AddThreadBinding()(mod)
+    mod = tvm.tir.transform.MarkChildFunctions()(mod)
     return mod
 
 @I.ir_module

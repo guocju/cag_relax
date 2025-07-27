@@ -75,8 +75,10 @@ template <typename FType>
 class ExprFunctor;
 
 // functions to be overriden.
-#define EXPR_FUNCTOR_DEFAULT \
-  { return VisitExprDefault_(op, std::forward<Args>(args)...); }
+#define EXPR_FUNCTOR_DEFAULT                                   \
+  {                                                            \
+    return VisitExprDefault_(op, std::forward<Args>(args)...); \
+  }
 
 #define IR_EXPR_FUNCTOR_DISPATCH(OP)                                                       \
   vtable.template set_dispatch<OP>([](const ObjectRef& n, TSelf* self, Args... args) {     \
@@ -142,6 +144,7 @@ class ExprFunctor<R(const PrimExpr& n, Args...)> {
   virtual R VisitExpr_(const ReduceNode* op, Args... args) EXPR_FUNCTOR_DEFAULT;
   virtual R VisitExpr_(const CastNode* op, Args... args) EXPR_FUNCTOR_DEFAULT;
   virtual R VisitExpr_(const NotNode* op, Args... args) EXPR_FUNCTOR_DEFAULT;
+  virtual R VisitExpr_(const CallTIRNode* op, Args... args) EXPR_FUNCTOR_DEFAULT;
   virtual R VisitExpr_(const SelectNode* op, Args... args) EXPR_FUNCTOR_DEFAULT;
   virtual R VisitExpr_(const RampNode* op, Args... args) EXPR_FUNCTOR_DEFAULT;
   virtual R VisitExpr_(const BroadcastNode* op, Args... args) EXPR_FUNCTOR_DEFAULT;
@@ -185,6 +188,7 @@ class ExprFunctor<R(const PrimExpr& n, Args...)> {
     IR_EXPR_FUNCTOR_DISPATCH(ReduceNode);
     IR_EXPR_FUNCTOR_DISPATCH(CastNode);
     IR_EXPR_FUNCTOR_DISPATCH(NotNode);
+    IR_EXPR_FUNCTOR_DISPATCH(CallTIRNode);
     IR_EXPR_FUNCTOR_DISPATCH(SelectNode);
     IR_EXPR_FUNCTOR_DISPATCH(RampNode);
     IR_EXPR_FUNCTOR_DISPATCH(ShuffleNode);
@@ -236,6 +240,7 @@ class TVM_DLL ExprVisitor : public ExprFunctor<void(const PrimExpr&)> {
   void VisitExpr_(const ReduceNode* op) override;
   void VisitExpr_(const CastNode* op) override;
   void VisitExpr_(const NotNode* op) override;
+  void VisitExpr_(const CallTIRNode* op) override;
   void VisitExpr_(const SelectNode* op) override;
   void VisitExpr_(const RampNode* op) override;
   void VisitExpr_(const BroadcastNode* op) override;
@@ -282,6 +287,7 @@ class TVM_DLL ExprMutator : protected ExprFunctor<PrimExpr(const PrimExpr&)> {
   PrimExpr VisitExpr_(const ReduceNode* op) override;
   PrimExpr VisitExpr_(const CastNode* op) override;
   PrimExpr VisitExpr_(const NotNode* op) override;
+  PrimExpr VisitExpr_(const CallTIRNode* op) override;
   PrimExpr VisitExpr_(const SelectNode* op) override;
   PrimExpr VisitExpr_(const RampNode* op) override;
   PrimExpr VisitExpr_(const BroadcastNode* op) override;

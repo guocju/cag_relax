@@ -45,7 +45,6 @@ class FPGAModuleNode final : public runtime::ModuleNode {
   // void SaveToFile(const String& file_name, const String& format) final;
   // void SaveToBinary(dmlc::Stream* stream) final;
   // String GetSource(const String& format) final;
-
  private:
   std::mutex mutex_;
   std::string addr_;
@@ -59,23 +58,52 @@ class FPGAModuleNode final : public runtime::ModuleNode {
 class FPGAWrappedFunc {
  public:
   void Init(FPGAModuleNode* m, ObjectPtr<Object> sptr, const std::string& func_name,
-            size_t num_void_args, const std::vector<int>& buffer_sizes, const int slice_num,
-            const int param_num) {
+            size_t num_void_args, const std::vector<DLDataType> arg_types,
+            const std::vector<std::vector<int>>& buffer_sizes,
+            const std::vector<int> buffer_types) {
     m_ = m;
     sptr_ = sptr;
     func_name_ = func_name;
     buffer_sizes_ = buffer_sizes;
-    slice_num_ = slice_num;
-    param_num_ = param_num;
+    arg_types_ = arg_types;
+    buffer_kinds_ = buffer_types;
     args_num_ = num_void_args;
   }
   // invoke the function with void arguments
   void operator()(TVMArgs args, TVMRetValue* rv, void** void_args) const {
-    int data_size = buffer_sizes_[0];
-    buffer_sizes_.erase(buffer_sizes_.begin());
-    int* out_buffer_sizes = buffer_sizes_.data();
-    FPGA_CALL(
-        fpgaModuleLaunchKernel(data_size, slice_num_, out_buffer_sizes, param_num_, void_args, args_num_, buffer_sizes_.size()));
+    std::vector<int> arg_sizes;
+
+    for (auto& row : buffer_sizes_) {
+      int arg_size = 1;
+      for (auto element : row) {
+        if (element <= 0) {
+          int idx = -element;
+          DLDataType t = arg_types_[idx];
+          int bits = t.bits;
+          void* data = void_args[idx];
+          switch (bits) {
+            case 8:
+              element = *reinterpret_cast<int8_t*>(data);
+              break;
+            case 16:
+              element = *reinterpret_cast<int16_t*>(data);
+              break;
+            case 32:
+              element = *reinterpret_cast<int32_t*>(data);
+              break;
+            case 64:
+              element = *reinterpret_cast<int64_t*>(data);
+              break;
+            default:
+              throw std::runtime_error("Unsupported bits width");
+          }
+        }
+        arg_size *= element;
+      }
+      arg_sizes.push_back(arg_size);
+    }
+
+    FPGA_CALL(fpgaModuleLaunchKernel(arg_sizes.data(), buffer_kinds_.data(), void_args, args_num_));
   }
 
  private:
@@ -85,9 +113,9 @@ class FPGAWrappedFunc {
   ObjectPtr<Object> sptr_;
   // The name of the function.
   std::string func_name_;
-  mutable std::vector<int> buffer_sizes_;
-  int slice_num_;
-  int param_num_;
+  std::vector<DLDataType> arg_types_;
+  std::vector<std::vector<int>> buffer_sizes_;
+  mutable std::vector<int> buffer_kinds_;
   int args_num_;
 };
 
@@ -98,8 +126,8 @@ PackedFunc FPGAModuleNode::GetFunction(const String& name, const ObjectPtr<Objec
   if (it == fmap_.end()) return PackedFunc();
   const FunctionInfo& info = it->second;
   FPGAWrappedFunc f;
-  f.Init(this, sptr_to_self, name, info.arg_types.size(), info.buffer_sizes, info.slice_num,
-         info.param_num);
+  f.Init(this, sptr_to_self, name, info.arg_types.size(), info.arg_types, info.buffer_sizes,
+         info.buffer_types);
   return PackFuncVoidAddr(f, info.arg_types);
 }
 
