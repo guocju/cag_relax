@@ -6,8 +6,8 @@
 
 class MemAllocator {
  private:
-  static constexpr size_t FPGA_MEMORY_SIZE = 1L * 1024 * 1024 * 1024;  // 1GB
-  static constexpr size_t BLOCK_SIZE = 64;                             // 64 bytes
+  static constexpr size_t FPGA_MEMORY_SIZE = 512 * 1024 * 1024 - 16 * 1024;  // 512MB -16KB
+  static constexpr size_t BLOCK_SIZE = 64;                                   // 64 bytes
   static constexpr size_t BLOCK_COUNT = FPGA_MEMORY_SIZE / BLOCK_SIZE;
 
   std::vector<bool> bitmap;
@@ -22,7 +22,7 @@ class MemAllocator {
     free_mem = FPGA_MEMORY_SIZE;
     bitmap.resize(BLOCK_COUNT, false);
     ptr_sizes = new size_t[BLOCK_COUNT]();
-    base_address = reinterpret_cast<uint8_t*>(0x00001000);
+    base_address = reinterpret_cast<uint8_t*>(0x20004000);
   }
 
   ~MemAllocator() { delete[] ptr_sizes; }

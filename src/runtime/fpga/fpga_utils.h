@@ -143,6 +143,7 @@ inline int fpgaMemcpy(void* to, const void* from, size_t size, fpgaMemcpyKind ki
     }
     goto out;
   } else if (kind == fpgaMemcpyDeviceToHost) {
+    fpga_sync();
     devname = DEVICE_TO_HOST;
     fpga_fd = open(devname, O_RDWR);
 
@@ -189,68 +190,29 @@ inline void fpgaFree(void* ptr) {
   allocator->deallocate(ptr);
 }
 
-inline void translate_and_transfer() {
-  /*
-  translate();
-  transfer();
-  GpuBufferArray = {};
-  */
-}
-inline void launch_p2p_kernel(int slice_number) {}
-
 enum class FPGADataType {
   // 无符号整型
   UInt8,
   UInt16,
   UInt32,
   UInt64,
-
   // 有符号整型
   Int8,
   Int16,
   Int32,
   Int64,
-
   // 浮点型
   Float16,
   Float32,
   Float64,
-
   // 其他常用类型
   Handle  // 指针类型
 };
 
-// void WriteToBRAM(const uint8_t* data, int size);  // 外部定义
-// void launchRISCV();                               // 外部定义
-
 inline void fpgaModuleLaunchKernel(int* buffer_sizes, int* buffer_kinds, void** ptrs, int ptr_num) {
-  // constexpr int kMaxParamBufferSize = 4096;
-  // uint8_t param_buffer[kMaxParamBufferSize];
-  // int offset = 0;
-
-  // for (int i = 0; i < ptr_num; ++i) {
-  //   int size = buffer_sizes[i];
-  //   FPGADataType dtype = static_cast<FPGADataType>(buffer_kinds[i]);
-
-  //   // 如果是 handle（即指针），写入 8 字节地址
-  //   if (dtype == FPGADataType::Handle) {
-  //     uintptr_t addr = reinterpret_cast<uintptr_t>(ptrs[i]);
-  //     assert(offset + 8 <= kMaxParamBufferSize);
-  //     memcpy(param_buffer + offset, &addr, 8);
-  //     offset += 8;
-  //   } else {
-  //     // 否则复制 value 内容（比如 int32、float32）
-  //     assert(offset + size <= kMaxParamBufferSize);
-  //     memcpy(param_buffer + offset, ptrs[i], size);
-  //     offset += size;
-  //   }
-  // }
-
-  // // 写入 FPGA 参数区（BRAM 或 AXI-Lite）
-  // WriteToBRAM(param_buffer, offset);
-
-  // // 启动执行
-  // launchRISCV();
+  uint32_t* buffer_sizes_u32 = reinterpret_cast<uint32_t*>(buffer_sizes);
+  uint32_t* buffer_kinds_u32 = reinterpret_cast<uint32_t*>(buffer_kinds);
+  fpgaLauchKernel(buffer_sizes_u32, buffer_kinds_u32, ptrs, ptr_num);
 }
 
 inline void transfer_descriptor(void* head_ptr, void* tail_ptr, void** ptr_arr, int ptr_num,
