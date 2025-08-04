@@ -22,6 +22,7 @@ struct gpu_buffer {
   size_t size;
 };
 static std::vector<gpu_buffer> GpuBufferArray = {};
+static bool needSync = 0;
 
 inline ssize_t read_to_buffer(char* fname, int fd, char* buffer, uint64_t size, uint64_t base) {
   ssize_t rc;
@@ -143,7 +144,9 @@ inline int fpgaMemcpy(void* to, const void* from, size_t size, fpgaMemcpyKind ki
     }
     goto out;
   } else if (kind == fpgaMemcpyDeviceToHost) {
-    fpga_sync();
+    if (needSync) {
+      fpga_sync();
+    }
     devname = DEVICE_TO_HOST;
     fpga_fd = open(devname, O_RDWR);
 
@@ -211,6 +214,7 @@ enum class FPGADataType {
 
 inline void fpgaModuleLaunchKernel(int* buffer_sizes, int* buffer_kinds, void** ptrs, int ptr_num) {
   fpgaLauchKernel(buffer_sizes, buffer_kinds, ptrs, ptr_num);
+  needSync = 1;
 }
 
 inline void transfer_descriptor(void* head_ptr, void* tail_ptr, void** ptr_arr, int ptr_num,

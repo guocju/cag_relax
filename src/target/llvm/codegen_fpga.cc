@@ -8,6 +8,8 @@
 #include <tvm/support/with.h>
 #include <tvm/target/target.h>
 
+#include <filesystem>
+
 #include "../../runtime/fpga/fpga_module.h"
 #include "../build_common.h"
 #include "codegen_cpu.h"
@@ -133,8 +135,18 @@ class CodeGenFPGA : public CodeGenCPU {
   }
 };
 
+std::string CreateTempFile(const std::string& suffix = ".ll") {
+  namespace fs = std::filesystem;
+  fs::path tmp_dir = fs::temp_directory_path();
+  auto now = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+  std::string filename = "tvm_fpga_" + std::to_string(now) + suffix;
+  fs::path tmp_file = tmp_dir / filename;
+
+  return tmp_file.string();
+}
+
 runtime::Module BuildFPGA(IRModule mod, Target target) {
-  std::string file_addr = "./zlocalTest/fpga_compile_result/result.ll";
+  std::string file_addr = CreateTempFile(".ll");
   LLVMInstance llvm_instance;
   With<LLVMTarget> llvm_target(llvm_instance, target);
   llvm::TargetMachine* tm = llvm_target->GetOrCreateTargetMachine();
