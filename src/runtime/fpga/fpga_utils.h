@@ -210,9 +210,7 @@ enum class FPGADataType {
 };
 
 inline void fpgaModuleLaunchKernel(int* buffer_sizes, int* buffer_kinds, void** ptrs, int ptr_num) {
-  uint32_t* buffer_sizes_u32 = reinterpret_cast<uint32_t*>(buffer_sizes);
-  uint32_t* buffer_kinds_u32 = reinterpret_cast<uint32_t*>(buffer_kinds);
-  fpgaLauchKernel(buffer_sizes_u32, buffer_kinds_u32, ptrs, ptr_num);
+  fpgaLauchKernel(buffer_sizes, buffer_kinds, ptrs, ptr_num);
 }
 
 inline void transfer_descriptor(void* head_ptr, void* tail_ptr, void** ptr_arr, int ptr_num,
