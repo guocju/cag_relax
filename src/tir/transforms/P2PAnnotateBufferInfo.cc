@@ -70,7 +70,7 @@ Pass AnnotateBufferInfoPass() {
 
         if (buf.defined()) {
           std::string buf_dtype = tvm::runtime::DLDataType2String(DLDataType(buf->dtype));
-          int type_code = handle_base + dtype_map.at(buf_dtype);
+          int type_code = handle_base;
           arg_kinds.push_back(IntImm(DataType::Int(32), type_code));
 
           Array<Integer> shape_repr;
