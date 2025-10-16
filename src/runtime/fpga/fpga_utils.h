@@ -22,7 +22,7 @@ struct gpu_buffer {
   size_t size;
 };
 static std::vector<gpu_buffer> GpuBufferArray = {};
-static bool needSync = 0;
+inline bool needSync = 0;
 
 inline ssize_t read_to_buffer(char* fname, int fd, char* buffer, uint64_t size, uint64_t base) {
   ssize_t rc;

@@ -34,6 +34,43 @@ TVM_REGISTER_GLOBAL("vm.builtin.p2p.descriptor_transfer")
 TVM_REGISTER_GLOBAL("vm.builtin.p2p.unmap_gpu_memory")
     .set_body_typed([](NDArray head, NDArray tail, NDArray bank_array) { memory_unmap(); });
 
+static std::unordered_map<std::string, int> dtype_map = {
+    {"uint8", 0}, {"uint16", 1}, {"uint32", 2},  {"uint64", 3},  {"int8", 4},     {"int16", 5},
+    {"int32", 6}, {"int64", 7},  {"float16", 8}, {"float32", 9}, {"float64", 10}, {"handle", 11},
+};
+
+TVM_REGISTER_GLOBAL("vm.builtin.fpga.launch_kernel").set_body([](TVMArgs args, TVMRetValue* rv) {
+  int n = args.num_args;
+  auto buffer_sizes = std::make_unique<int[]>(n);
+  auto buffer_kinds = std::make_unique<int[]>(n);
+  auto ptrs = std::make_unique<void*[]>(n);
+  std::vector<int> int_values;
+  std::vector<float> float_values;
+  int_values.reserve(n);
+  float_values.reserve(n);
+
+  for (int i = 0; i < n; i++) {
+    TVMArgValue arg = args[i];
+    if (arg.IsObjectRef<NDArray>()) {
+      buffer_kinds[i] = 11;
+      const TVMValue& value = arg.value();
+      ptrs[i] = value.v_handle;
+    } else if (arg.TryAsInt()) {
+      int v = arg.value().v_int64;
+      int_values.push_back(v);
+      buffer_kinds[i] = 6;
+      ptrs[i] = &int_values.back();
+    } else if (arg.TryAsFloat()) {
+      float v = static_cast<float>(arg.value().v_float64);
+      float_values.push_back(v);
+      buffer_kinds[i] = 9;
+      ptrs[i] = &float_values.back();
+    }
+  }
+  fpgaModuleLaunchKernel(buffer_sizes.get(), buffer_kinds.get(), ptrs.get(), n);
+  fpga_sync();
+});
+
 }  // namespace relax_vm
 }  // namespace runtime
 }  // namespace tvm
